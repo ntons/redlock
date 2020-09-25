@@ -23,11 +23,11 @@ func (l *Lock) Metadata() string {
 // EasyLock bind client to itself for the ease to use
 type EasyLock struct {
 	*Lock
-	client Client
+	client RedisClient
 }
 
 // bind client to lock, an extended lock returned
-func Bind(lock *Lock, client Client) *EasyLock {
+func Bind(lock *Lock, client RedisClient) *EasyLock {
 	return &EasyLock{Lock: lock, client: client}
 }
 func (l *EasyLock) TTL(ctx context.Context) (time.Duration, error) {

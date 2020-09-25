@@ -27,7 +27,7 @@ var (
 )
 
 // Client is a minimal client interface.
-type Client interface {
+type RedisClient interface {
 	SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.BoolCmd
 	Eval(ctx context.Context, script string, keys []string, args ...interface{}) *redis.Cmd
 	EvalSha(ctx context.Context, sha1 string, keys []string, args ...interface{}) *redis.Cmd
@@ -37,7 +37,7 @@ type Client interface {
 
 // Obtain tries to obtain a new lock using a key with the given TTL.
 // May return ErrNotObtained if not successful.
-func Obtain(ctx context.Context, client Client, key string, ttl time.Duration, opts ...Option) (*Lock, error) {
+func Obtain(ctx context.Context, client RedisClient, key string, ttl time.Duration, opts ...Option) (*Lock, error) {
 	var o options
 	for _, opt := range opts {
 		opt.apply(&o)
@@ -87,7 +87,7 @@ func Obtain(ctx context.Context, client Client, key string, ttl time.Duration, o
 }
 
 // TTL returns the remaining time-to-live. Returns 0 if the lock has expired.
-func TTL(ctx context.Context, client Client, lock *Lock) (time.Duration, error) {
+func TTL(ctx context.Context, client RedisClient, lock *Lock) (time.Duration, error) {
 	res, err := luaPTTL.Run(ctx, client, []string{lock.Key}, lock.Value).Result()
 	if err == redis.Nil {
 		return 0, nil
@@ -103,7 +103,7 @@ func TTL(ctx context.Context, client Client, lock *Lock) (time.Duration, error) 
 
 // Refresh extends the lock with a new TTL.
 // May return ErrNotObtained if refresh is unsuccessful.
-func Refresh(ctx context.Context, client Client, lock *Lock, ttl time.Duration) error {
+func Refresh(ctx context.Context, client RedisClient, lock *Lock, ttl time.Duration) error {
 	ttlVal := strconv.FormatInt(int64(ttl/time.Millisecond), 10)
 	status, err := luaRefresh.Run(ctx, client, []string{lock.Key}, lock.Value, ttlVal).Result()
 	if err != nil {
@@ -116,7 +116,7 @@ func Refresh(ctx context.Context, client Client, lock *Lock, ttl time.Duration) 
 
 // Release manually releases the lock.
 // May return ErrLockNotHeld.
-func Release(ctx context.Context, client Client, lock *Lock) error {
+func Release(ctx context.Context, client RedisClient, lock *Lock) error {
 	res, err := luaRelease.Run(ctx, client, []string{lock.Key}, lock.Value).Result()
 	if err == redis.Nil {
 		return ErrLockNotHeld
@@ -130,7 +130,7 @@ func Release(ctx context.Context, client Client, lock *Lock) error {
 	return nil
 }
 
-func obtain(ctx context.Context, client Client, key, value string, ttl time.Duration) (bool, error) {
+func obtain(ctx context.Context, client RedisClient, key, value string, ttl time.Duration) (bool, error) {
 	return client.SetNX(ctx, key, value, ttl).Result()
 }
 
