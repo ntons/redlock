@@ -1,4 +1,4 @@
-module github.com/ntons/distlock-go
+module github.com/ntons/distlock
 
 go 1.13
 
