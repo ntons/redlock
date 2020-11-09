@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/ntons/distlock-go"
+	"github.com/ntons/distlock"
 )
 
 func Example() {
