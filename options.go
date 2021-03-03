@@ -9,16 +9,6 @@ type options struct {
 	// RetryStrategy allows to customise the lock retry strategy.
 	// Default: do not retry
 	RetryStrategy RetryStrategy
-
-	// Metadata string is appended to the lock token.
-	Metadata string
-}
-
-func (o *options) getMetadata() string {
-	if o != nil {
-		return o.Metadata
-	}
-	return ""
 }
 
 func (o *options) getRetryStrategy() RetryStrategy {
@@ -41,9 +31,6 @@ func (f funcOption) apply(o *options) {
 
 func WithRetryStrategy(strategy RetryStrategy) Option {
 	return funcOption{func(o *options) { o.RetryStrategy = strategy }}
-}
-func WithMetadata(metadata string) Option {
-	return funcOption{func(o *options) { o.Metadata = metadata }}
 }
 
 // --------------------------------------------------------------------

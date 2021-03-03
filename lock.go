@@ -5,37 +5,39 @@ import (
 	"time"
 )
 
-// extend lock
-func newLock(key, value string) *Lock {
-	return &Lock{Key: key, Value: value}
+type Lock string
+
+const fakeToken = "0000000000000000000000"
+
+func NewLock(key, token string) Lock {
+	if len(token) != 22 {
+		token = fakeToken
+	}
+	return Lock(token + key)
 }
 
-// Token returns the token value set by the lock.
-func (l *Lock) Token() string {
-	return l.Value[:22]
+func (lock Lock) GetKey() string {
+	if len(lock) < 23 {
+		return ""
+	}
+	return string(lock[22:])
+}
+func (lock Lock) GetToken() string {
+	if len(lock) < 23 {
+		return fakeToken
+	}
+	return string(lock[:22])
 }
 
-// Metadata returns the metadata of the lock.
-func (l *Lock) Metadata() string {
-	return l.Value[22:]
+func (lock Lock) TTL(
+	ctx context.Context, cli RedisClient) (time.Duration, error) {
+	return TTL(ctx, cli, lock)
 }
-
-// EasyLock bind client to itself for the ease to use
-type EasyLock struct {
-	*Lock
-	client RedisClient
+func (lock Lock) Refresh(
+	ctx context.Context, cli RedisClient, ttl time.Duration) error {
+	return Refresh(ctx, cli, lock, ttl)
 }
-
-// bind client to lock, an extended lock returned
-func Bind(lock *Lock, client RedisClient) *EasyLock {
-	return &EasyLock{Lock: lock, client: client}
-}
-func (l *EasyLock) TTL(ctx context.Context) (time.Duration, error) {
-	return TTL(ctx, l.client, l.Lock)
-}
-func (l *EasyLock) Refresh(ctx context.Context, ttl time.Duration) error {
-	return Refresh(ctx, l.client, l.Lock, ttl)
-}
-func (l *EasyLock) Release(ctx context.Context) error {
-	return Release(ctx, l.client, l.Lock)
+func (lock Lock) Release(
+	ctx context.Context, cli RedisClient) error {
+	return Release(ctx, cli, lock)
 }
