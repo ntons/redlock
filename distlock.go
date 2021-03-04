@@ -25,17 +25,12 @@ var (
 	ErrLockNotHeld = errors.New("distlock: lock not held")
 )
 
-// Client is a minimal client interface.
-type RedisClient interface {
-	SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.BoolCmd
-	Eval(ctx context.Context, script string, keys []string, args ...interface{}) *redis.Cmd
-	EvalSha(ctx context.Context, sha1 string, keys []string, args ...interface{}) *redis.Cmd
-	ScriptLoad(ctx context.Context, script string) *redis.StringCmd
-}
-
 // Obtain tries to obtain a new lock using a key with the given TTL.
 // May return ErrNotObtained if not successful.
 func Obtain(ctx context.Context, cli RedisClient, key string, ttl time.Duration, opts ...Option) (Lock, error) {
+	ctx, cancel := context.WithTimeout(ctx, ttl)
+	defer cancel()
+
 	var o options
 	for _, opt := range opts {
 		opt.apply(&o)
@@ -46,9 +41,6 @@ func Obtain(ctx context.Context, cli RedisClient, key string, ttl time.Duration,
 		panic(err)
 	}
 	token := base64.RawURLEncoding.EncodeToString(buf[:])
-
-	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(ttl))
-	defer cancel()
 
 	var (
 		retry = o.getRetryStrategy()
@@ -100,6 +92,9 @@ func TTL(ctx context.Context, cli RedisClient, lock Lock) (time.Duration, error)
 // Refresh extends the lock with a new TTL.
 // May return ErrNotObtained if refresh is unsuccessful.
 func Refresh(ctx context.Context, cli RedisClient, lock Lock, ttl time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, ttl)
+	defer cancel()
+
 	ttlVal := strconv.FormatInt(int64(ttl/time.Millisecond), 10)
 	status, err := luaRefresh.Run(
 		ctx, cli, []string{lock.GetKey()}, lock.GetToken(), ttlVal).Result()
