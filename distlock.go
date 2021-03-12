@@ -28,25 +28,22 @@ var (
 // Obtain tries to obtain a new lock using a key with the given TTL.
 // May return ErrNotObtained if not successful.
 func Obtain(ctx context.Context, cli RedisClient, key string, ttl time.Duration, opts ...Option) (Lock, error) {
-	ctx, cancel := context.WithTimeout(ctx, ttl)
-	defer cancel()
-
 	var o options
 	for _, opt := range opts {
 		opt.apply(&o)
 	}
-	// Create a random token
+
+	// generate a random token
 	var buf [16]byte
 	if _, err := io.ReadFull(rand.Reader, buf[:]); err != nil {
 		panic(err)
 	}
 	token := base64.RawURLEncoding.EncodeToString(buf[:])
 
-	var (
-		retry = o.getRetryStrategy()
-		timer *time.Timer
-	)
-	for {
+	ctx, cancel := context.WithTimeout(ctx, ttl)
+	defer cancel()
+
+	for retry, timer := o.getRetryStrategy(), (*time.Timer)(nil); ; {
 		ok, err := cli.SetNX(ctx, key, token, ttl).Result()
 		if err != nil {
 			return "", err
