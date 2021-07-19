@@ -31,10 +31,14 @@ func newScript(src string) *script {
 	return &script{src: src, hash: hex.EncodeToString(h.Sum(nil))}
 }
 
-func (script *script) Run(ctx context.Context, cli RedisClient, keys []string, args ...interface{}) (r *redis.Cmd) {
-	isNoScript := func(err error) bool {
-		return err != nil && strings.HasPrefix(err.Error(), "NOSCRIPT ")
+func isNoScript(err error) bool {
+	if err == nil {
+		return false
 	}
+	return err != nil && strings.HasPrefix(err.Error(), "NOSCRIPT ")
+}
+
+func (script *script) Run(ctx context.Context, cli RedisClient, keys []string, args ...interface{}) (r *redis.Cmd) {
 	if r = cli.EvalSha(ctx, script.hash, keys, args...); !isNoScript(r.Err()) {
 		return
 	}
@@ -43,8 +47,10 @@ func (script *script) Run(ctx context.Context, cli RedisClient, keys []string, a
 		script.mu.Unlock()
 		return
 	}
-	if cli.ScriptLoad(ctx, script.src).Err() != nil {
+	if err := cli.ScriptLoad(ctx, script.src).Err(); err != nil {
 		script.mu.Unlock()
+		r = redis.NewCmd(ctx)
+		r.SetErr(err)
 		return
 	}
 	script.mu.Unlock()

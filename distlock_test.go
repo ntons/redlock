@@ -62,6 +62,17 @@ var _ = Describe("Client", func() {
 		Expect(distlock.Release(ctx, redisClient, lock)).To(Succeed())
 	})
 
+	It("should ensure", func() {
+		lock, err := distlock.Obtain(ctx, redisClient, lockKey, time.Minute)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(distlock.TTL(ctx, redisClient, lock)).To(BeNumerically("~", time.Minute, time.Second))
+		Expect(distlock.Ensure(ctx, redisClient, lock, time.Hour)).To(Succeed())
+		Expect(distlock.TTL(ctx, redisClient, lock)).To(BeNumerically("~", time.Hour, time.Second))
+		Expect(distlock.Ensure(ctx, redisClient, lock, time.Minute)).To(Succeed())
+		Expect(distlock.TTL(ctx, redisClient, lock)).To(BeNumerically("~", time.Hour, time.Second))
+		Expect(distlock.Release(ctx, redisClient, lock)).To(Succeed())
+	})
+
 	It("should fail to release if expired", func() {
 		lock, err := distlock.Obtain(ctx, redisClient, lockKey, 5*time.Millisecond)
 		Expect(err).NotTo(HaveOccurred())

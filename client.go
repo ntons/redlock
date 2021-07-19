@@ -28,3 +28,7 @@ func (c *Client) Refresh(ctx context.Context, lock Lock, ttl time.Duration) erro
 func (c *Client) Release(ctx context.Context, lock Lock) error {
 	return Release(ctx, c.client, lock)
 }
+
+func (c *Client) Ensure(ctx context.Context, lock Lock, ttl time.Duration) error {
+	return Ensure(ctx, c.client, lock, ttl)
+}

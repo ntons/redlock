@@ -16,6 +16,7 @@ var (
 	luaRefresh = newScript(`if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("pexpire", KEYS[1], ARGV[2]) else return 0 end`)
 	luaRelease = newScript(`if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end`)
 	luaPTTL    = newScript(`if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("pttl", KEYS[1]) else return -3 end`)
+	luaEnsure  = newScript(`if redis.call("get", KEYS[1]) == ARGV[1] then if redis.call("pttl", KEYS[1]) < tonumber(ARGV[2]) then return redis.call("pexpire", KEYS[1], ARGV[2]) else return 1 end else return 0 end`)
 )
 
 var (
@@ -119,4 +120,20 @@ func Release(
 		return ErrLockNotHeld
 	}
 	return nil
+}
+
+// Ensure ttl greater than
+func Ensure(ctx context.Context, cli RedisClient, lock Lock, ttl time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, ttl)
+	defer cancel()
+
+	ttlVal := strconv.FormatInt(int64(ttl/time.Millisecond), 10)
+	status, err := luaEnsure.Run(
+		ctx, cli, []string{lock.GetKey()}, lock.GetToken(), ttlVal).Result()
+	if err != nil {
+		return err
+	} else if status == int64(1) {
+		return nil
+	}
+	return ErrNotObtained
 }
