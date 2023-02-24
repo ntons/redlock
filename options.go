@@ -91,9 +91,9 @@ func ExponentialBackoff(min, max time.Duration) RetryStrategy {
 func (r *exponentialBackoff) NextBackoff() time.Duration {
 	r.cnt++
 
-	ms := 2 << 25
+	ms := 1 << 25
 	if r.cnt < 25 {
-		ms = 2 << r.cnt
+		ms = 1 << r.cnt
 	}
 
 	if d := time.Duration(ms) * time.Millisecond; d < r.min {
