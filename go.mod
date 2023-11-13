@@ -1,4 +1,4 @@
-module github.com/ntons/distlock
+module github.com/ntons/redlock
 
 go 1.13
 

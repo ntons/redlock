@@ -1,4 +1,4 @@
-package distlock
+package redlock
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 )
 
 func TestCon(t *testing.T) {
-	const key = "__ntons_distlock_go_unit_test__"
+	const key = "__ntons_redlock_go_unit_test__"
 
 	var ctx = context.Background()
 

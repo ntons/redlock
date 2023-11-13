@@ -1,3 +1,3 @@
-# distlock-go
+# redlock
 
 Transferable distributed lock
